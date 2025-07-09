@@ -1,0 +1,35 @@
+-- 🔒 Protegido por FELIPEHUB
+
+-- Carrega a Ghost GUI
+loadstring(game:HttpGet("https://raw.githubusercontent.com/GhostPlayer352/UI-Library/refs/heads/main/Ghost%20Gui"))()
+
+-- Aguarda a interface carregar
+local gui = game:GetService("CoreGui"):WaitForChild("GhostGui")
+gui.MainFrame.Title.Text = "Supermarket Simulator"
+
+-- Botão: Get All Gamepasses
+AddContent("TextButton", "Get All Gamepasses", [[
+    local rs = game:GetService("ReplicatedStorage")
+    local eve = rs:WaitForChild("Events")
+    local gprem = eve:WaitForChild("Goods"):WaitForChild("GamePassRE")
+
+    local gamepasses = {
+        { "Cashier", 28 },
+        { "Quick Check-out", 1 },
+        { "Porter", 5 },
+        { "Quick Pricing" }
+    }
+
+    for _, args in ipairs(gamepasses) do
+        gprem:FireServer(unpack(args))
+    end
+]])
+
+-- Texto FELIPEHUB abaixo do botão
+local TextLabel = AddContent("TextLabel")
+TextLabel.Text = "FELIPEHUB"
+TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel.TextStrokeTransparency = 0.6
+TextLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+TextLabel.Font = Enum.Font.SourceSansBold
+TextLabel.TextSize = 16
