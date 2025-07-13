@@ -1,136 +1,246 @@
---[[
-silly script lol
-by Nothingnesser
-pop it script Note:
-• Adjust your Roblox avatar's height and width to the maximum possible
-• in the game buy: "Potion Invisible" and "Cold Plunge"
-• Activate script, please do not touch the screen
-• bring player Please click player
-]]--
+-- Serviços principais
+local CoreGui = game:GetService("CoreGui")
+local gui = Instance.new("ScreenGui", CoreGui)
+gui.Name = "GhostPopItGUI"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
 
-local p=game:GetService("Players")
-local r=game:GetService("ReplicatedStorage")
-local rs=game:GetService("RunService")
-local u=game:GetService("UserInputService")
-local lp=p.LocalPlayer
-local chr=lp.Character or lp.CharacterAdded:Wait()
-local hum=chr:WaitForChild("Humanoid")
-local hrp=chr:WaitForChild("HumanoidRootPart")
-local orig=hrp.Position
-hrp.CFrame=CFrame.new(orig.X,9999999,orig.Z)
-task.wait(.5)
-local re=r:WaitForChild("RemoteEvents")
-local eq=re:WaitForChild("Equip")
-local jr=re:WaitForChild("Jumped")
-local function wt(n,t) local bp=lp:FindFirstChildOfClass("Backpack") local s=tick() local tool; while tick()-s<t do tool=bp:FindFirstChild(n) if tool then return tool end task.wait(.1) end return nil end
-local function trig(n,c,d) local bp=lp:FindFirstChildOfClass("Backpack") if not bp then return false end local tool=bp:FindFirstChild(n) if not tool then tool=chr:FindFirstChild(n) if tool then tool.Parent=bp else tool=wt(n,3) if not tool then return false end end end tool.Parent=chr task.wait(.2) if tool.Parent~=chr then return false end for i=1,c do pcall(function() tool:Activate() end) if d then task.wait(d) end end if tool.Parent==chr then tool.Parent=bp end return true end
-local function eqp(n) local bp=lp:FindFirstChildOfClass("Backpack") if not bp then return false end local tool=bp:FindFirstChild(n) if tool then tool.Parent=chr task.wait(.2) return true end return false end
-eq:FireServer("Potion Invisible")
-task.wait(.5)
-trig("Potion Invisible",1,0)
-eq:FireServer("Cold Plunge")
-task.wait(.5)
-task.wait(5)
-hrp.CFrame=CFrame.new(orig)
-do local cp=chr:FindFirstChild("Cold Plunge") if cp then cp.Parent=lp:FindFirstChildOfClass("Backpack") end end
-local cpT=wt("Cold Plunge",3) if not cpT then return end
-local hnd=cpT:FindFirstChild("Handle") if not hnd then return end
-local off=hnd.Position-hrp.Position
-local function wtgt()
- local ev=Instance.new("BindableEvent")
- local con
- con=u.InputBegan:Connect(function(inp,gp)
-  if gp then return end
-  if inp.UserInputType==Enum.UserInputType.MouseButton1 then
-   local m=lp:GetMouse()
-   local hit=m.Target
-   if hit then local mod=hit:FindFirstAncestorOfClass("Model") if mod and mod~=chr then local pl=p:GetPlayerFromCharacter(mod) if pl then ev:Fire(pl) end end end
-  elseif inp.UserInputType==Enum.UserInputType.Touch then
-   local st=tick()
-   local spos=inp.Position
-   local conEnd
-   conEnd=u.InputEnded:Connect(function(i,gp2)
-    if i.UserInputType==Enum.UserInputType.Touch then
-     local dur=tick()-st
-     local diff=(i.Position-spos).Magnitude
-     conEnd:Disconnect()
-     if dur<.3 and diff<20 then
-      local m=lp:GetMouse()
-      local hit=m.Target
-      if hit then local mod=hit:FindFirstAncestorOfClass("Model") if mod and mod~=chr then local pl=p:GetPlayerFromCharacter(mod) if pl then ev:Fire(pl) end end end
-     end
+-- Janela principal
+local frame = Instance.new("Frame", gui)
+frame.AnchorPoint = Vector2.new(0.5, 0.5)
+frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+frame.Size = UDim2.new(0.6, 0, 0.28, 0)
+frame.BackgroundTransparency = 0.4
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.BorderSizePixel = 0
+
+-- Texto de instrução
+local msg = Instance.new("TextLabel", frame)
+msg.Position = UDim2.new(0.05, 0, 0.1, 0)
+msg.Size = UDim2.new(0.9, -80, 0.8, 0)
+msg.Text = [[
+• Adjust your Roblox avatar's height and width to the maximum possible
+• In the game buy: "Potion Invisible" and "Cold Plunge"
+• Activate script, please do not touch the screen
+• Bring player: Please click player
+]]
+msg.TextColor3 = Color3.new(1, 1, 1)
+msg.BackgroundTransparency = 1
+msg.Font = Enum.Font.GothamSemibold
+msg.TextSize = 16
+msg.TextWrapped = true
+msg.TextXAlignment = Enum.TextXAlignment.Left
+msg.TextYAlignment = Enum.TextYAlignment.Top
+
+-- Botão OK
+local button = Instance.new("TextButton", frame)
+button.Position = UDim2.new(1, -70, 1, -40)
+button.Size = UDim2.new(0, 60, 0, 30)
+button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+button.Text = "OK"
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Font = Enum.Font.GothamBold
+button.TextSize = 16
+button.BorderSizePixel = 0
+
+-- Quando clicar no OK, destruir GUI e executar o script completo embutido
+button.MouseButton1Click:Connect(function()
+    gui:Destroy()
+    
+    -- 🧠 Script Pop It começa aqui
+    local p=game:GetService("Players")
+    local r=game:GetService("ReplicatedStorage")
+    local rs=game:GetService("RunService")
+    local u=game:GetService("UserInputService")
+    local lp=p.LocalPlayer
+    local chr=lp.Character or lp.CharacterAdded:Wait()
+    local hum=chr:WaitForChild("Humanoid")
+    local hrp=chr:WaitForChild("HumanoidRootPart")
+    local orig=hrp.Position
+    hrp.CFrame=CFrame.new(orig.X,9999999,orig.Z)
+    task.wait(.5)
+    local re=r:WaitForChild("RemoteEvents")
+    local eq=re:WaitForChild("Equip")
+    local jr=re:WaitForChild("Jumped")
+    local function wt(n,t)
+        local bp=lp:FindFirstChildOfClass("Backpack")
+        local s=tick()
+        local tool
+        while tick()-s<t do
+            tool=bp:FindFirstChild(n)
+            if tool then return tool end
+            task.wait(.1)
+        end
+        return nil
     end
-   end)
-  end
- end)
- local tgt=ev.Event:Wait()
- con:Disconnect()
- return tgt
-end
-local function isSit(pl) if not pl or not pl.Character then return false end local h=pl.Character:FindFirstChildOfClass("Humanoid") return (h and h.Sit) end
-while true do
- hum.AutoRotate=true
- local tgt=wtgt()
- hum.AutoRotate=false
- local tele=true
- local rec,cpE=nil,false
- local t0=tick()
-	local teleLoop
-	teleLoop=rs.Heartbeat:Connect(function(dt)
-		if tele and tgt and tgt.Character then
-			local tHRP=tgt.Character:FindFirstChild("HumanoidRootPart")
-			if tHRP then
-				local desPos=tHRP.Position-off
-				local cf=CFrame.new(desPos)
-				hrp.CFrame=hrp.CFrame:Lerp(cf,.2)
-				if not cpE then
-					local dist=(hrp.Position-tHRP.Position).Magnitude
-					if dist<20 then
-						if eqp("Cold Plunge") then
-							cpE=true
-							local cp=chr:FindFirstChild("Cold Plunge")
-							if cp then
-								local cpH=cp:FindFirstChild("Handle")
-								if cpH then off=cpH.Position-hrp.Position end
-							end
-						end
-					end
-				end
-			end
-		end
-	end)
-	local ws=tick()
-	while not isSit(tgt) do
-		task.wait(.1)
-		if not (tgt and tgt.Character) then break end
-		if tick()-ws>10 then break end
-	end
-	if teleLoop then teleLoop:Disconnect() end
-	if not isSit(tgt) then
-		local cp=chr:FindFirstChild("Cold Plunge")
-		if cp then cp.Parent=lp:FindFirstChildOfClass("Backpack") end
-		hum.AutoRotate=true
-		continue
-	end
-	rec=hrp.Position
-	local fix=Vector3.new(136,15,191)
-	local fixCF=CFrame.new(fix)*CFrame.Angles(math.rad(90),math.rad(0),math.rad(90))
-	hrp.CFrame=fixCF
-	hum.PlatformStand=true
-	local bp=Instance.new("BodyPosition") bp.MaxForce=Vector3.new(1e6,1e6,1e6) bp.P=1e5 bp.Position=fix bp.Parent=hrp
-	local bg=Instance.new("BodyGyro") bg.MaxTorque=Vector3.new(1e6,1e6,1e6) bg.P=1e5 bg.CFrame=fixCF bg.Parent=hrp
-	local oc=hrp.CanCollide; hrp.CanCollide=false
-	while isSit(tgt) do
-		jr:FireServer() task.wait(.05)
-		if not (tgt and tgt.Character) then break end
-	end
-	if hrp:FindFirstChild("BodyPosition") then hrp.BodyPosition:Destroy() end
-	if hrp:FindFirstChild("BodyGyro") then hrp.BodyGyro:Destroy() end
-	hrp.CanCollide=oc
-	hum.PlatformStand=false
-	hum.AutoRotate=true
-	if rec then hrp.CFrame=CFrame.new(rec) end
-	local cp=chr:FindFirstChild("Cold Plunge")
-	if cp then cp.Parent=lp:FindFirstChildOfClass("Backpack") end
-	task.wait(1)
-end
+    local function trig(n,c,d)
+        local bp=lp:FindFirstChildOfClass("Backpack")
+        if not bp then return false end
+        local tool=bp:FindFirstChild(n)
+        if not tool then
+            tool=chr:FindFirstChild(n)
+            if tool then
+                tool.Parent=bp
+            else
+                tool=wt(n,3)
+                if not tool then return false end
+            end
+        end
+        tool.Parent=chr
+        task.wait(.2)
+        if tool.Parent~=chr then return false end
+        for i=1,c do
+            pcall(function() tool:Activate() end)
+            if d then task.wait(d) end
+        end
+        if tool.Parent==chr then tool.Parent=bp end
+        return true
+    end
+    local function eqp(n)
+        local bp=lp:FindFirstChildOfClass("Backpack")
+        if not bp then return false end
+        local tool=bp:FindFirstChild(n)
+        if tool then tool.Parent=chr task.wait(.2) return true end
+        return false
+    end
+
+    eq:FireServer("Potion Invisible")
+    task.wait(.5)
+    trig("Potion Invisible",1,0)
+    eq:FireServer("Cold Plunge")
+    task.wait(.5)
+    task.wait(5)
+    hrp.CFrame=CFrame.new(orig)
+    do
+        local cp=chr:FindFirstChild("Cold Plunge")
+        if cp then cp.Parent=lp:FindFirstChildOfClass("Backpack") end
+    end
+    local cpT=wt("Cold Plunge",3)
+    if not cpT then return end
+    local hnd=cpT:FindFirstChild("Handle")
+    if not hnd then return end
+    local off=hnd.Position-hrp.Position
+    local function wtgt()
+        local ev=Instance.new("BindableEvent")
+        local con
+        con=u.InputBegan:Connect(function(inp,gp)
+            if gp then return end
+            if inp.UserInputType==Enum.UserInputType.MouseButton1 then
+                local m=lp:GetMouse()
+                local hit=m.Target
+                if hit then
+                    local mod=hit:FindFirstAncestorOfClass("Model")
+                    if mod and mod~=chr then
+                        local pl=p:GetPlayerFromCharacter(mod)
+                        if pl then ev:Fire(pl) end
+                    end
+                end
+            elseif inp.UserInputType==Enum.UserInputType.Touch then
+                local st=tick()
+                local spos=inp.Position
+                local conEnd
+                conEnd=u.InputEnded:Connect(function(i,gp2)
+                    if i.UserInputType==Enum.UserInputType.Touch then
+                        local dur=tick()-st
+                        local diff=(i.Position-spos).Magnitude
+                        conEnd:Disconnect()
+                        if dur<.3 and diff<20 then
+                            local m=lp:GetMouse()
+                            local hit=m.Target
+                            if hit then
+                                local mod=hit:FindFirstAncestorOfClass("Model")
+                                if mod and mod~=chr then
+                                    local pl=p:GetPlayerFromCharacter(mod)
+                                    if pl then ev:Fire(pl) end
+                                end
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+        local tgt=ev.Event:Wait()
+        con:Disconnect()
+        return tgt
+    end
+    local function isSit(pl)
+        if not pl or not pl.Character then return false end
+        local h=pl.Character:FindFirstChildOfClass("Humanoid")
+        return (h and h.Sit)
+    end
+    while true do
+        hum.AutoRotate=true
+        local tgt=wtgt()
+        hum.AutoRotate=false
+        local tele=true
+        local rec,cpE=nil,false
+        local teleLoop
+        teleLoop=rs.Heartbeat:Connect(function()
+            if tele and tgt and tgt.Character then
+                local tHRP=tgt.Character:FindFirstChild("HumanoidRootPart")
+                if tHRP then
+                    local desPos=tHRP.Position-off
+                    local cf=CFrame.new(desPos)
+                    hrp.CFrame=hrp.CFrame:Lerp(cf,.2)
+                    if not cpE then
+                        local dist=(hrp.Position-tHRP.Position).Magnitude
+                        if dist<20 then
+                            if eqp("Cold Plunge") then
+                                cpE=true
+                                local cp=chr:FindFirstChild("Cold Plunge")
+                                if cp then
+                                    local cpH=cp:FindFirstChild("Handle")
+                                    if cpH then off=cpH.Position-hrp.Position end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+        local ws=tick()
+        while not isSit(tgt) do
+            task.wait(.1)
+            if not (tgt and tgt.Character) then break end
+            if tick()-ws>10 then break end
+        end
+        if teleLoop then teleLoop:Disconnect() end
+        if not isSit(tgt) then
+            local cp=chr:FindFirstChild("Cold Plunge")
+            if cp then cp.Parent=lp:FindFirstChildOfClass("Backpack") end
+            hum.AutoRotate=true
+            continue
+        end
+        rec=hrp.Position
+        local fix=Vector3.new(136,15,191)
+        local fixCF=CFrame.new(fix)*CFrame.Angles(math.rad(90),math.rad(0),math.rad(90))
+        hrp.CFrame=fixCF
+        hum.PlatformStand=true
+        local bp=Instance.new("BodyPosition")
+        bp.MaxForce=Vector3.new(1e6,1e6,1e6)
+        bp.P=1e5
+        bp.Position=fix
+        bp.Parent=hrp
+        local bg=Instance.new("BodyGyro")
+        bg.MaxTorque=Vector3.new(1e6,1e6,1e6)
+        bg.P=1e5
+        bg.CFrame=fixCF
+        bg.Parent=hrp
+        local oc=hrp.CanCollide
+        hrp.CanCollide=false
+        while isSit(tgt) do
+            jr:FireServer()
+            task.wait(.05)
+            if not (tgt and tgt.Character) then break end
+        end
+        if hrp:FindFirstChild("BodyPosition") then hrp.BodyPosition:Destroy() end
+        if hrp:FindFirstChild("BodyGyro") then hrp.BodyGyro:Destroy() end
+        hrp.CanCollide=oc
+        hum.PlatformStand=false
+        hum.AutoRotate=true
+        if rec then hrp.CFrame=CFrame.new(rec) end
+        local cp=chr:FindFirstChild("Cold Plunge")
+        if cp then cp.Parent=lp:FindFirstChildOfClass("Backpack") end
+        task.wait(1)
+    end
+end)
