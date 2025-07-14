@@ -9,20 +9,31 @@ gui.IgnoreGuiInset = true
 local frame = Instance.new("Frame", gui)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
 frame.Position = UDim2.new(0.5, 0, 0.5, 0)
-frame.Size = UDim2.new(0.6, 0, 0.28, 0)
+frame.Size = UDim2.new(0.6, 0, 0.32, 0)
 frame.BackgroundTransparency = 0.4
 frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 frame.BorderSizePixel = 0
 
+-- Texto de título "by Nothingnesser"
+local title = Instance.new("TextLabel", frame)
+title.Position = UDim2.new(0.05, 0, 0.02, 0)
+title.Size = UDim2.new(0.9, 0, 0.12, 0)
+title.Text = "by Nothingnesser"
+title.TextColor3 = Color3.fromRGB(0, 255, 0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextXAlignment = Enum.TextXAlignment.Left
+
 -- Texto de instrução
 local msg = Instance.new("TextLabel", frame)
-msg.Position = UDim2.new(0.05, 0, 0.1, 0)
-msg.Size = UDim2.new(0.9, -80, 0.8, 0)
+msg.Position = UDim2.new(0.05, 0, 0.15, 0)
+msg.Size = UDim2.new(0.9, -80, 0.7, 0)
 msg.Text = [[
-• Adjust your Roblox avatar's height and width to the maximum possible
-• In the game buy: "Potion Invisible" and "Cold Plunge"
-• Activate script, please do not touch the screen
-• Bring player: Please click player
+• Ajuste a altura e largura do seu avatar no máximo
+• No jogo, compre: "Potion Invisible" e "Cold Plunge"
+• Ao ativar o script, não toque na tela
+• Para puxar jogador: clique nele
 ]]
 msg.TextColor3 = Color3.new(1, 1, 1)
 msg.BackgroundTransparency = 1
@@ -43,11 +54,11 @@ button.Font = Enum.Font.GothamBold
 button.TextSize = 16
 button.BorderSizePixel = 0
 
--- Quando clicar no OK, destruir GUI e executar o script completo embutido
+-- Quando clicar no OK, destruir GUI e executar o script Pop It embutido
 button.MouseButton1Click:Connect(function()
     gui:Destroy()
-    
-    -- 🧠 Script Pop It começa aqui
+
+    -- 🧠 Início do script Pop It embutido
     local p=game:GetService("Players")
     local r=game:GetService("ReplicatedStorage")
     local rs=game:GetService("RunService")
