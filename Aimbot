@@ -1,0 +1,189 @@
+--[[
+ .____                  ________ ___.    _____                           __                
+ |    |    __ _______   \_____  \\_ |___/ ____\_ __  ______ ____ _____ _/  |_  ___________ 
+ |    |   |  |  \__  \   /   |   \| __ \   __\  |  \/  ___// ___\\__  \\   __\/  _ \_  __ \
+ |    |___|  |  // __ \_/    |    \ \_\ \  | |  |  /\___ \\  \___ / __ \|  | (  <_> )  | \/
+ |_______ \____/(____  /\_______  /___  /__| |____//____  >\___  >____  /__|  \____/|__|   
+         \/          \/         \/    \/                \/     \/     \/                   
+          \_Welcome to LuaObfuscator.com   (Alpha 0.10.8) ~  Much Love, Ferib 
+]]--
+
+local v0 = loadstring(game:HttpGet("https://raw.githubusercontent.com/vvhoy884ugvv/hgcdghcvjh/refs/heads/main/sfvd.txt"))();
+
+local v1 = v0:CreateWindow({
+    Name = "FELIPEHUB",
+    LoadingTitle = "Made By FELIPEHUB",
+    LoadingSubtitle = "By FELIPEHUB",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = nil,
+        FileName = "HydraVIP"
+    },
+    Discord = {
+        Enabled = true,
+        Invite = "dvdge._",
+        RememberJoins = true
+    },
+    BackgroundColor = Color3.fromRGB(255, 255, 255), -- 🟢 ALTERADO: Cor branca
+    TextColor = Color3.fromRGB(255, 255, 255)
+})
+
+v0:Notify({
+    Title = "FELIPEHUb INJECTED",
+    Content = "Thank you so much for using my script felipehub!",
+    Duration = 6.5,
+    Image = (1069582394 - 621219936),
+    Actions = {
+        Ignore = {
+            Name = "Close",
+            Callback = function()
+                print("Notification closed")
+            end
+        }
+    }
+})
+
+local v2 = v1:CreateTab("Aimbot", 828769388 - 380406930)
+local v3 = v2:CreateSection("Aimbot")
+
+v2:CreateToggle({Name="Silent Aim",Callback=function(v20)
+    _G.silentAim = v20;
+    print("Silent Aim: " .. tostring(v20));
+end})
+
+v2:CreateToggle({Name="Infinite Ammo",Callback=function(v21)
+    _G.infiniteAmmo = v21;
+    print("Infinite Ammo: " .. tostring(v21));
+end})
+
+v2:CreateToggle({Name="No Recoil",Callback=function(v22)
+    _G.noRecoil = v22;
+    print("No Recoil: " .. tostring(v22));
+end})
+
+v2:CreateToggle({Name="No Spread",Callback=function(v24)
+    _G.noSpread = v24;
+    print("No Spread: " .. tostring(v24));
+end})
+
+v2:CreateToggle({Name="Fast Guns",Callback=function(v25)
+    _G.fastFire = v25;
+    print("Fast Guns: " .. tostring(v25));
+end})
+
+v2:CreateToggle({Name="Automatic Guns",Callback=function(v26)
+    _G.autoGuns = v26;
+    print("Automatic Guns: " .. tostring(v26));
+end})
+
+local v4 = v1:CreateTab("super op", 448362638 - (67 + 113))
+local v5 = v4:CreateSection("Killall")
+
+v4:CreateButton({Name="Killall V1",Callback=function()
+    print("WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!")
+    getgenv().Settings = {gun="Sniper"}
+    if not game.Players.LocalPlayer.Character:FindFirstChild(Settings.gun) then
+        game.Players.LocalPlayer.Character.Humanoid:EquipTool(game.Players.LocalPlayer.Backpack[Settings.gun])
+    end
+    for _, plr in ipairs(game.Players:GetPlayers()) do
+        if plr.Name ~= game.Players.LocalPlayer.Name then
+            game:GetService("ReplicatedStorage").WeaponsSystem.Network.WeaponHit:FireServer(
+                game.Players.LocalPlayer.Character[Settings.gun],
+                {
+                    p = plr.Character.Head.Position,
+                    pid = 1,
+                    part = plr.Character.Head,
+                    d = 500,
+                    maxDist = 500,
+                    h = plr.Character.Humanoid,
+                    m = Enum.Material.Plastic,
+                    n = Vector3.new(-0.96, -60, -0.26),
+                    t = 0.15,
+                    sid = 32
+                }
+            )
+        end
+    end
+end})
+
+local v6 = v1:CreateTab("ESP", 448363410 - (802 + 150))
+local v7 = v6:CreateSection("ESP")
+
+v6:CreateButton({Name="ESP V1",Callback=function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Lucasfin000/SpaceHub/main/UESP"))()
+    print("ESP V1 activated!")
+end})
+
+local v8 = v1:CreateTab("Contributors", 1207143410 - 758780952)
+local v9 = v8:CreateSection("Contributors")
+
+v8:CreateButton({Name="1. GAMES_M.D",Callback=function()
+    setclipboard("https://youtube.com/@games.gaming_30?si=TcdIMr2CB16TZugf")
+    print("Link copied to clipboard!")
+end})
+
+-- Overrides
+local BaseWeapon = require(game:GetService("ReplicatedStorage").WeaponsSystem.Libraries.BaseWeapon)
+local originalFire = BaseWeapon.fire
+local originalConfig = BaseWeapon.getConfigValue
+local originalUseAmmo = BaseWeapon.useAmmo
+local originalAmmoCount = BaseWeapon.getAmmoInWeapon
+
+local function getClosestPlayerToCursor()
+    local closest = nil
+    local shortest = math.huge
+    for _, plr in pairs(game.Players:GetPlayers()) do
+        if plr ~= game.Players.LocalPlayer and plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Head") and plr.Character.Humanoid.Health > 0 then
+            local screenPos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(plr.Character.Head.Position)
+            if onScreen then
+                local mousePos = game:GetService("UserInputService"):GetMouseLocation()
+                local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                if dist < shortest then
+                    shortest = dist
+                    closest = plr.Character.Head
+                end
+            end
+        end
+    end
+    return closest
+end
+
+BaseWeapon.getAmmoInWeapon = function(self, ...)
+    if _G.infiniteAmmo then
+        return math.huge
+    end
+    return originalAmmoCount(self, ...)
+end
+
+BaseWeapon.fire = function(self, ...)
+    local args = {...}
+    if _G.silentAim then
+        local target = getClosestPlayerToCursor()
+        if target then
+            args[2] = (target.Position - args[1]).Unit
+            args[3] = 1
+        end
+    end
+    return originalFire(self, unpack(args))
+end
+
+BaseWeapon.getConfigValue = function(self, ...)
+    local args = {...}
+    if _G.fastFire and args[1] == "ShotCooldown" then
+        return 0.01
+    elseif _G.autoGuns and args[1] == "FireMode" then
+        return "Automatic"
+    elseif _G.noRecoil and (args[1] == "RecoilMin" or args[1] == "RecoilMax") then
+        return 0
+    elseif _G.noSpread and (args[1] == "MinSpread" or args[1] == "MaxSpread") then
+        return 0
+    end
+    return originalConfig(self, unpack(args))
+end
+
+BaseWeapon.useAmmo = function(self, ...)
+    if _G.infiniteAmmo and self.ammoInWeaponValue then
+        return 1
+    end
+    return originalUseAmmo(self, ...)
+end
