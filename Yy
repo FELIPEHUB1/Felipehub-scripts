@@ -1,0 +1,573 @@
+local CK = loadstring(game:HttpGet("https://raw.githubusercontent.com/4lpaca-pin/CompKiller/refs/heads/main/src/source.luau"))()
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local Teams = game:GetService("Teams")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Camera = Workspace.CurrentCamera
+
+local UI = CK.new({
+    Name = "FELIPEHUB",
+    Keybind = "LeftAlt",
+    Scale = CK.Scale.Window
+})
+
+----------------- ABA ESP -----------------
+local tabESP = UI:DrawTab({Name = "ESP", Icon = "star"})
+local sectionESP = tabESP:DrawSection({Name = "ESP Menu", Position = "left"})
+
+local espEnabled = false
+local boxes = {}
+local RainbowName = false
+local RainbowHealth = false
+local RainbowBox = false
+
+local function getRainbowColor(speed)
+    local time = tick() * speed
+    local r = (math.sin(time) + 1) / 2
+    local g = (math.sin(time + 2) + 1) / 2
+    local b = (math.sin(time + 4) + 1) / 2
+    return Color3.new(r, g, b)
+end
+
+local function healthColor(health, maxHealth)
+    local ratio = math.clamp(health / maxHealth, 0, 1)
+    return Color3.fromRGB(255 * (1 - ratio), 255 * ratio, 0)
+end
+
+local function createBox()
+    local Drawing = Drawing
+    local box = Drawing.new("Square")
+    box.Thickness = 2
+    box.Transparency = 1
+    box.Filled = false
+
+    local name = Drawing.new("Text")
+    name.Size = 14
+    name.Center = true
+    name.Outline = true
+
+    local healthText = Drawing.new("Text")
+    healthText.Size = 14
+    healthText.Center = true
+    healthText.Outline = true
+
+    local distanceText = Drawing.new("Text")
+    distanceText.Size = 12
+    distanceText.Center = true
+    distanceText.Outline = true
+    distanceText.Color = Color3.fromRGB(200, 200, 200)
+
+    return {
+        box = box,
+        name = name,
+        healthText = healthText,
+        distanceText = distanceText,
+        blink = false,
+        blinkTimer = 0
+    }
+end
+
+local function removeBox(boxTable)
+    if boxTable then
+        if boxTable.box then boxTable.box:Remove() end
+        if boxTable.name then boxTable.name:Remove() end
+        if boxTable.healthText then boxTable.healthText:Remove() end
+        if boxTable.distanceText then boxTable.distanceText:Remove() end
+    end
+end
+
+local function updateBox(boxTable, character, deltaTime)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoid or humanoid.Health <= 0 or not rootPart then
+        boxTable.box.Visible = false
+        boxTable.name.Visible = false
+        boxTable.healthText.Visible = false
+        boxTable.distanceText.Visible = false
+        return false
+    end
+
+    local pos, visible = Camera:WorldToViewportPoint(rootPart.Position)
+    if not visible then
+        boxTable.box.Visible = false
+        boxTable.name.Visible = false
+        boxTable.healthText.Visible = false
+        boxTable.distanceText.Visible = false
+        return true
+    end
+
+    local topPos, _ = Camera:WorldToViewportPoint(rootPart.Position + Vector3.new(0, 3, 0))
+    local bottomPos, _ = Camera:WorldToViewportPoint(rootPart.Position - Vector3.new(0, 3, 0))
+
+    local height = math.abs(topPos.Y - bottomPos.Y)
+    local width = height / 2
+
+    boxTable.box.Size = Vector2.new(width, height)
+    boxTable.box.Position = Vector2.new(pos.X - width / 2, pos.Y - height / 2)
+
+    local healthRatio = humanoid.Health / humanoid.MaxHealth
+    local baseColor = healthColor(humanoid.Health, humanoid.MaxHealth)
+    local color = baseColor
+
+    if RainbowBox then
+        color = getRainbowColor(3)
+    end
+
+    if healthRatio < 0.2 then
+        boxTable.blinkTimer = boxTable.blinkTimer + deltaTime
+        if boxTable.blinkTimer > 0.5 then
+            boxTable.blink = not boxTable.blink
+            boxTable.blinkTimer = 0
+        end
+        boxTable.box.Color = boxTable.blink and Color3.new(1,0,0) or color
+    else
+        boxTable.box.Color = color
+        boxTable.blink = false
+        boxTable.blinkTimer = 0
+    end
+    boxTable.box.Visible = true
+
+    boxTable.name.Position = Vector2.new(pos.X, pos.Y - height / 2 - 18)
+    boxTable.name.Text = character.Name
+    boxTable.name.Color = RainbowName and getRainbowColor(5) or Color3.fromRGB(255, 255, 255)
+    boxTable.name.Visible = true
+
+    boxTable.healthText.Position = Vector2.new(pos.X, pos.Y + height / 2 + 2)
+    boxTable.healthText.Text = ("HP: %d"):format(math.floor(humanoid.Health))
+    boxTable.healthText.Color = RainbowHealth and getRainbowColor(4) or baseColor
+    boxTable.healthText.Visible = true
+
+    local dist = (player.Character and player.Character:FindFirstChild("HumanoidRootPart")) and
+        (player.Character.HumanoidRootPart.Position - rootPart.Position).Magnitude or 0
+    boxTable.distanceText.Position = Vector2.new(pos.X, pos.Y + height / 2 + 18)
+    boxTable.distanceText.Text = ("%.1f studs"):format(dist)
+    boxTable.distanceText.Color = Color3.fromRGB(200, 200, 200)
+    boxTable.distanceText.Visible = true
+
+    return true
+end
+
+local function espLoop(deltaTime)
+    for ply, boxTable in pairs(boxes) do
+        local character = ply.Character
+        if character and character.Parent then
+            local alive = updateBox(boxTable, character, deltaTime)
+            if not alive then
+                removeBox(boxTable)
+                boxes[ply] = nil
+            end
+        else
+            removeBox(boxTable)
+            boxes[ply] = nil
+        end
+    end
+end
+
+local function addPlayer(ply)
+    if ply == player then return end
+    if boxes[ply] then return end
+
+    local function onCharacterAdded(character)
+        if not espEnabled then return end
+        if boxes[ply] then return end
+        boxes[ply] = createBox()
+    end
+
+    ply.CharacterAdded:Connect(onCharacterAdded)
+
+    if ply.Character then
+        boxes[ply] = createBox()
+    end
+end
+
+local function removePlayer(ply)
+    if boxes[ply] then
+        removeBox(boxes[ply])
+        boxes[ply] = nil
+    end
+end
+
+local espLastTime = tick()
+
+local function toggleESP(state)
+    espEnabled = state
+
+    if not espEnabled then
+        for ply, boxTable in pairs(boxes) do
+            removeBox(boxTable)
+        end
+        boxes = {}
+    else
+        for _, ply in pairs(Players:GetPlayers()) do
+            addPlayer(ply)
+        end
+    end
+end
+
+Players.PlayerAdded:Connect(addPlayer)
+Players.PlayerRemoving:Connect(removePlayer)
+
+RunService.RenderStepped:Connect(function()
+    if espEnabled then
+        local now = tick()
+        local deltaTime = now - espLastTime
+        espLastTime = now
+        espLoop(deltaTime)
+    end
+end)
+
+sectionESP:AddToggle({
+    Name = "Enable ESP",
+    Default = false,
+    Callback = function(v)
+        toggleESP(v)
+    end
+})
+
+sectionESP:AddToggle({
+    Name = "Rainbow Name",
+    Default = false,
+    Callback = function(v)
+        RainbowName = v
+    end
+})
+
+sectionESP:AddToggle({
+    Name = "Rainbow Health",
+    Default = false,
+    Callback = function(v)
+        RainbowHealth = v
+    end
+})
+
+sectionESP:AddToggle({
+    Name = "Rainbow Box",
+    Default = false,
+    Callback = function(v)
+        RainbowBox = v
+    end
+})
+
+----------------- ABA AIM -----------------
+local tabAim = UI:DrawTab({Name = "AIM", Icon = "star"})
+local sectionAim = tabAim:DrawSection({Name = "Aim Menu", Position = "left"})
+
+local settings = {
+    SilentAim = true,
+    AimKey = Enum.UserInputType.MouseButton2,
+    MaxDistance = 1000,
+    FOV = 100,
+    AutoShoot = false,
+    Enabled = false,
+    TargetPart = "Head",
+    Smoothness = 0.3
+}
+
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Visible = false
+FOVCircle.Radius = settings.FOV
+FOVCircle.Color = Color3.fromRGB(255, 50, 50)
+FOVCircle.Thickness = 2
+FOVCircle.Filled = false
+FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+local function isValidTarget(targetPlayer)
+    if not player.Team or not targetPlayer.Team then return false end
+    if player.Team ~= Teams.Seekers then return false end
+    if targetPlayer.Team ~= Teams.Hiders then return false end
+    if not targetPlayer.Character then return false end
+    if not targetPlayer.Character:FindFirstChild("Humanoid") then return false end
+    if targetPlayer.Character.Humanoid.Health <= 0 then return false end
+    return targetPlayer.Character:FindFirstChild(settings.TargetPart) ~= nil
+end
+
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    if not settings.Enabled or not settings.SilentAim then 
+        return oldNamecall(self, ...) 
+    end
+    
+    local method = getnamecallmethod()
+    if method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRay" then
+        local target = getClosestPlayer()
+        if target and isValidTarget(target) then
+            local args = {...}
+            local targetPart = target.Character[settings.TargetPart]
+            args[1] = Ray.new(
+                Camera.CFrame.Position,
+                (targetPart.Position - Camera.CFrame.Position).Unit * settings.MaxDistance
+            )
+            return oldNamecall(self, unpack(args))
+        end
+    end
+    return oldNamecall(self, ...)
+end)
+
+local function getClosestPlayer()
+    local closestPlayer, closestDistance = nil, settings.FOV
+    local mousePos = UserInputService:GetMouseLocation()
+    
+    for _, target in pairs(Players:GetPlayers()) do
+        if isValidTarget(target) then
+            local targetPos = target.Character[settings.TargetPart].Position
+            local screenPos, onScreen = Camera:WorldToViewportPoint(targetPos)
+            
+            if onScreen then
+                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                if distance < closestDistance then
+                    closestPlayer = target
+                    closestDistance = distance
+                end
+            end
+        end
+    end
+    
+    return closestPlayer
+end
+
+local function preciseAim()
+    if not settings.Enabled then return end
+    
+    local target = getClosestPlayer()
+    if target and isValidTarget(target) then
+        local targetPart = target.Character[settings.TargetPart]
+        local currentCFrame = Camera.CFrame
+        local newCFrame = CFrame.new(
+            currentCFrame.Position,
+            targetPart.Position
+        )
+        
+        Camera.CFrame = currentCFrame:Lerp(newCFrame, settings.Smoothness)
+        
+        if settings.AutoShoot then
+            mouse1click()
+        end
+    end
+end
+
+sectionAim:AddToggle({
+    Name = "Seeker AimBot",
+    Default = false,
+    Callback = function(v)
+        settings.Enabled = v
+        FOVCircle.Visible = v
+    end
+})
+
+sectionAim:AddSlider({
+    Name = "Fov Size",
+    Min = 50,
+    Max = 300,
+    Default = 100,
+    Callback = function(v)
+        settings.FOV = v
+        FOVCircle.Radius = v
+    end
+})
+
+sectionAim:AddSlider({
+    Name = "Smoothness of aim",
+    Min = 0.1,
+    Max = 1,
+    Default = 0.3,
+    Callback = function(v)
+        settings.Smoothness = v
+    end
+})
+
+if UserInputService.TouchEnabled then
+    settings.AimKey = Enum.UserInputType.Touch
+    settings.FOV = 120
+    FOVCircle.Radius = 120
+end
+
+RunService.RenderStepped:Connect(function()
+    if settings.Enabled then
+        preciseAim()
+        FOVCircle.Position = Vector2.new(
+            Camera.ViewportSize.X / 2,
+            Camera.ViewportSize.Y / 2
+        )
+    end
+end)
+
+----------------- ABA MAIN -----------------
+local tabMain = UI:DrawTab({Name = "Main", Icon = "tag"})
+local sectionMain = tabMain:DrawSection({Name = "Cheats", Position = "left"})
+
+local RemoteClaim = ReplicatedStorage:WaitForChild("Network"):WaitForChild("SessionLengthIncentive/ClaimReward")
+local RemoteConsume = ReplicatedStorage:WaitForChild("Network"):WaitForChild("Consumables/Consume")
+
+local enabledAutoClaim = false
+local selectedTroll = "Speed"
+
+sectionMain:AddToggle({
+    Name = "Auto Claim Bonus",
+    Default = false,
+    Callback = function(v)
+        enabledAutoClaim = v
+        if v then
+            RemoteClaim:FireServer()
+        end
+    end
+})
+
+sectionMain:AddDropdown({
+    Name = "Choose Troll",
+    List = {"Speed", "BearTrap", "FreezeAllSeekers", "InvisibleWhileMoving"},
+    Value = "Speed",
+    Callback = function(choice)
+        selectedTroll = choice
+        RemoteConsume:FireServer(choice)
+    end
+})
+
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+local isNoclipEnabled = false
+local isInfiniteJumpEnabled = false
+
+sectionMain:AddToggle({
+    Name = "Noclip",
+    Default = false,
+    Callback = function(v)
+        isNoclipEnabled = v
+        if not v and player.Character then
+            for _, part in pairs(player.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end
+})
+
+sectionMain:AddToggle({
+    Name = "Infinite Jump",
+    Default = false,
+    Callback = function(v)
+        isInfiniteJumpEnabled = v
+    end
+})
+
+UserInputService.JumpRequest:Connect(function()
+    if isInfiniteJumpEnabled and humanoid and humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+RunService.Stepped:Connect(function()
+    if isNoclipEnabled and player.Character then
+        for _, part in pairs(player.Character:GetChildren()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+----------------- ABA EXTRA -----------------
+local tabExtra = UI:DrawTab({Name = "Extra", Icon = "settings"})
+local sectionExtra = tabExtra:DrawSection({Name = "Misc", Position = "left"})
+
+sectionExtra:AddToggle({
+    Name = "Invisible",
+    Default = false,
+    Callback = function(value)
+        if value then
+            loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FELIPEHUB-INVISIBLE-BYPASS-33793"))()
+        else
+            -- Não faz nada quando desativa, pois o script não tem toggle off
+        end
+    end
+})
+
+-- Anti AFK
+local antiAfkConnection = nil
+local antiAfkEnabled = false
+
+sectionExtra:AddToggle({
+    Name = "Anti AFK",
+    Default = false,
+    Callback = function(value)
+        antiAfkEnabled = value
+        if value then
+            antiAfkConnection = player.Idled:Connect(function()
+                game:GetService("VirtualUser"):ClickButton2(Vector2.new())
+            end)
+        else
+            if antiAfkConnection then
+                antiAfkConnection:Disconnect()
+                antiAfkConnection = nil
+            end
+        end
+    end
+})
+
+-- Hitbox
+local hitboxEnabled = false
+local hitboxSize = 5 -- tamanho padrão da hitbox
+
+local function setHitbox(character, size)
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local hrp = character.HumanoidRootPart
+        hrp.Size = Vector3.new(size, size, size)
+        hrp.Transparency = 0.5
+    end
+end
+
+local function resetHitbox(character)
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local hrp = character.HumanoidRootPart
+        hrp.Size = Vector3.new(2, 2, 1)
+        hrp.Transparency = 1
+    end
+end
+
+local function applyHitboxToAll()
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr.Character then
+            if hitboxEnabled then
+                setHitbox(plr.Character, hitboxSize)
+            else
+                resetHitbox(plr.Character)
+            end
+        end
+        plr.CharacterAdded:Connect(function(char)
+            if hitboxEnabled then
+                setHitbox(char, hitboxSize)
+            else
+                resetHitbox(char)
+            end
+        end)
+    end
+end
+
+sectionExtra:AddToggle({
+    Name = "Hitbox",
+    Default = false,
+    Callback = function(value)
+        hitboxEnabled = value
+        applyHitboxToAll()
+    end
+})
+
+sectionExtra:AddSlider({
+    Name = "Hitbox Size",
+    Min = 2,
+    Max = 20,
+    Default = 5,
+    Callback = function(value)
+        hitboxSize = value
+        if hitboxEnabled then
+            applyHitboxToAll()
+        end
+    end
+})
+
+UI
