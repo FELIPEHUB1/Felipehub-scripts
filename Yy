@@ -256,144 +256,88 @@ sectionESP:AddToggle({
 local tabAim = UI:DrawTab({Name = "AIM", Icon = "star"})
 local sectionAim = tabAim:DrawSection({Name = "Aim Menu", Position = "left"})
 
-local settings = {
-    SilentAim = true,
-    AimKey = Enum.UserInputType.MouseButton2,
-    MaxDistance = 1000,
-    FOV = 100,
-    AutoShoot = false,
-    Enabled = false,
-    TargetPart = "Head",
-    Smoothness = 0.3
-}
+local aimbotEnabled = false
+local fov = 100
 
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Visible = false
-FOVCircle.Radius = settings.FOV
-FOVCircle.Color = Color3.fromRGB(255, 50, 50)
-FOVCircle.Thickness = 2
-FOVCircle.Filled = false
-FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+local FOVring = Drawing.new("Circle")
+FOVring.Visible = false
+FOVring.Thickness = 2
+FOVring.Color = Color3.fromRGB(128, 0, 128) -- Roxo
+FOVring.Filled = false
+FOVring.Radius = fov
+FOVring.Position = Camera.ViewportSize / 2
 
-local function isValidTarget(targetPlayer)
-    if not player.Team or not targetPlayer.Team then return false end
-    if player.Team ~= Teams.Seekers then return false end
-    if targetPlayer.Team ~= Teams.Hiders then return false end
-    if not targetPlayer.Character then return false end
-    if not targetPlayer.Character:FindFirstChild("Humanoid") then return false end
-    if targetPlayer.Character.Humanoid.Health <= 0 then return false end
-    return targetPlayer.Character:FindFirstChild(settings.TargetPart) ~= nil
+local function updateDrawings()
+    local camViewportSize = Camera.ViewportSize
+    FOVring.Position = camViewportSize / 2
 end
 
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    if not settings.Enabled or not settings.SilentAim then 
-        return oldNamecall(self, ...) 
-    end
-    
-    local method = getnamecallmethod()
-    if method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRay" then
-        local target = getClosestPlayer()
-        if target and isValidTarget(target) then
-            local args = {...}
-            local targetPart = target.Character[settings.TargetPart]
-            args[1] = Ray.new(
-                Camera.CFrame.Position,
-                (targetPart.Position - Camera.CFrame.Position).Unit * settings.MaxDistance
-            )
-            return oldNamecall(self, unpack(args))
-        end
-    end
-    return oldNamecall(self, ...)
-end)
+local function lookAt(target)
+    local lookVector = (target - Camera.CFrame.Position).unit
+    local newCFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + lookVector)
+    Camera.CFrame = newCFrame
+end
 
-local function getClosestPlayer()
-    local closestPlayer, closestDistance = nil, settings.FOV
-    local mousePos = UserInputService:GetMouseLocation()
-    
-    for _, target in pairs(Players:GetPlayers()) do
-        if isValidTarget(target) then
-            local targetPos = target.Character[settings.TargetPart].Position
-            local screenPos, onScreen = Camera:WorldToViewportPoint(targetPos)
-            
-            if onScreen then
-                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                if distance < closestDistance then
-                    closestPlayer = target
-                    closestDistance = distance
+local function isEnemy(player1, player2)
+    if not player1.Team or not player2.Team then
+        return false
+    end
+    return player1.Team ~= player2.Team
+end
+
+local function getClosestPlayerInFOV(trg_part)
+    local nearest = nil
+    local last = math.huge
+    local playerMousePos = Camera.ViewportSize / 2
+    local localPlayer = Players.LocalPlayer
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= localPlayer and plr.Character and plr.Character:FindFirstChild(trg_part) then
+            if isEnemy(localPlayer, plr) then
+                local part = plr.Character[trg_part]
+                local ePos, isVisible = Camera:WorldToViewportPoint(part.Position)
+                local distance = (Vector2.new(ePos.X, ePos.Y) - playerMousePos).Magnitude
+
+                if distance < last and isVisible and distance < fov then
+                    last = distance
+                    nearest = plr
                 end
             end
         end
     end
-    
-    return closestPlayer
+
+    return nearest
 end
 
-local function preciseAim()
-    if not settings.Enabled then return end
-    
-    local target = getClosestPlayer()
-    if target and isValidTarget(target) then
-        local targetPart = target.Character[settings.TargetPart]
-        local currentCFrame = Camera.CFrame
-        local newCFrame = CFrame.new(
-            currentCFrame.Position,
-            targetPart.Position
-        )
-        
-        Camera.CFrame = currentCFrame:Lerp(newCFrame, settings.Smoothness)
-        
-        if settings.AutoShoot then
-            mouse1click()
+RunService.RenderStepped:Connect(function()
+    updateDrawings()
+    if aimbotEnabled then
+        local closest = getClosestPlayerInFOV("Head")
+        if closest and closest.Character and closest.Character:FindFirstChild("Head") then
+            lookAt(closest.Character.Head.Position)
         end
     end
-end
+    FOVring.Visible = aimbotEnabled
+end)
 
 sectionAim:AddToggle({
-    Name = "Seeker AimBot",
+    Name = "Activate Aimbot",
     Default = false,
     Callback = function(v)
-        settings.Enabled = v
-        FOVCircle.Visible = v
+        aimbotEnabled = v
     end
 })
 
 sectionAim:AddSlider({
-    Name = "Fov Size",
+    Name = "FOV Size",
     Min = 50,
     Max = 300,
     Default = 100,
     Callback = function(v)
-        settings.FOV = v
-        FOVCircle.Radius = v
+        fov = v
+        FOVring.Radius = v
     end
 })
-
-sectionAim:AddSlider({
-    Name = "Smoothness of aim",
-    Min = 0.1,
-    Max = 1,
-    Default = 0.3,
-    Callback = function(v)
-        settings.Smoothness = v
-    end
-})
-
-if UserInputService.TouchEnabled then
-    settings.AimKey = Enum.UserInputType.Touch
-    settings.FOV = 120
-    FOVCircle.Radius = 120
-end
-
-RunService.RenderStepped:Connect(function()
-    if settings.Enabled then
-        preciseAim()
-        FOVCircle.Position = Vector2.new(
-            Camera.ViewportSize.X / 2,
-            Camera.ViewportSize.Y / 2
-        )
-    end
-end)
 
 ----------------- ABA MAIN -----------------
 local tabMain = UI:DrawTab({Name = "Main", Icon = "tag"})
@@ -475,99 +419,103 @@ end)
 local tabExtra = UI:DrawTab({Name = "Extra", Icon = "settings"})
 local sectionExtra = tabExtra:DrawSection({Name = "Misc", Position = "left"})
 
+-- Invisible toggle
 sectionExtra:AddToggle({
     Name = "Invisible",
     Default = false,
     Callback = function(value)
         if value then
             loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-FELIPEHUB-INVISIBLE-BYPASS-33793"))()
-        else
-            -- Não faz nada quando desativa, pois o script não tem toggle off
         end
     end
 })
 
--- Anti AFK
-local antiAfkConnection = nil
-local antiAfkEnabled = false
+-- Speed slider (max 100)
+local speedValue = 16
+local maxSpeed = 100
+local humanoid = nil
+local char = player.Character or player.CharacterAdded:Wait()
+humanoid = char:WaitForChild("Humanoid")
 
-sectionExtra:AddToggle({
-    Name = "Anti AFK",
-    Default = false,
-    Callback = function(value)
-        antiAfkEnabled = value
-        if value then
-            antiAfkConnection = player.Idled:Connect(function()
-                game:GetService("VirtualUser"):ClickButton2(Vector2.new())
-            end)
-        else
-            if antiAfkConnection then
-                antiAfkConnection:Disconnect()
-                antiAfkConnection = nil
-            end
+sectionExtra:AddSlider({
+    Name = "Speed",
+    Min = 16,
+    Max = maxSpeed,
+    Default = 16,
+    Callback = function(v)
+        speedValue = v
+        if humanoid then
+            humanoid.WalkSpeed = speedValue
         end
     end
 })
 
--- Hitbox
+-- Hitbox toggle and size slider (não ativa em você)
 local hitboxEnabled = false
-local hitboxSize = 5 -- tamanho padrão da hitbox
-
-local function setHitbox(character, size)
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        local hrp = character.HumanoidRootPart
-        hrp.Size = Vector3.new(size, size, size)
-        hrp.Transparency = 0.5
-    end
-end
-
-local function resetHitbox(character)
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        local hrp = character.HumanoidRootPart
-        hrp.Size = Vector3.new(2, 2, 1)
-        hrp.Transparency = 1
-    end
-end
-
-local function applyHitboxToAll()
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr.Character then
-            if hitboxEnabled then
-                setHitbox(plr.Character, hitboxSize)
-            else
-                resetHitbox(plr.Character)
-            end
-        end
-        plr.CharacterAdded:Connect(function(char)
-            if hitboxEnabled then
-                setHitbox(char, hitboxSize)
-            else
-                resetHitbox(char)
-            end
-        end)
-    end
-end
+local hitboxSize = Vector3.new(2, 2, 1)
 
 sectionExtra:AddToggle({
     Name = "Hitbox",
     Default = false,
-    Callback = function(value)
-        hitboxEnabled = value
-        applyHitboxToAll()
+    Callback = function(v)
+        hitboxEnabled = v
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= player and plr.Character then
+                local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    if hitboxEnabled then
+                        hrp.Size = hitboxSize
+                        hrp.Transparency = 0.5
+                    else
+                        hrp.Size = Vector3.new(2, 2, 1)
+                        hrp.Transparency = 1
+                    end
+                end
+            end
+        end
     end
 })
 
 sectionExtra:AddSlider({
     Name = "Hitbox Size",
-    Min = 2,
-    Max = 20,
-    Default = 5,
-    Callback = function(value)
-        hitboxSize = value
+    Min = 1,
+    Max = 10,
+    Default = 2,
+    Callback = function(v)
+        hitboxSize = Vector3.new(v, v, 1)
         if hitboxEnabled then
-            applyHitboxToAll()
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                    local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        hrp.Size = hitboxSize
+                    end
+                end
+            end
         end
     end
 })
 
-UI
+-- Plataforma e teleporte distante
+local platformPart = nil
+sectionExtra:AddButton({
+    Name = "Create Platform + Teleport",
+    Callback = function()
+        if platformPart then
+            platformPart:Destroy()
+            platformPart = nil
+        end
+        platformPart = Instance.new("Part")
+        platformPart.Size = Vector3.new(50, 1, 50)
+        platformPart.Anchored = true
+        platformPart.Position = Vector3.new(0, 1000, 0)
+        platformPart.Transparency = 0.5
+        platformPart.Parent = Workspace
+
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            player.Character.HumanoidRootPart.CFrame = CFrame.new(0, 1005, 0)
+        end
+    end
+})
+
+UI:Init()
